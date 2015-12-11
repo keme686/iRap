@@ -1,9 +1,14 @@
 /**
- * 
+ *
  */
 package de.unibonn.iai.eis.irap.evaluation;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -28,49 +33,68 @@ import de.unibonn.iai.eis.irap.sparql.SPARQLExecutor;
  *
  */
 public class InterestEvaluator {
-	
+
 	private static final Logger logger = LoggerFactory.getLogger(InterestEvaluator.class);
 	private Subscriber subscriber;
 	private Changeset changeset;
-	
-	public InterestEvaluator(Subscriber subscriber, Changeset changeset) {
+	private String foldername;
+	private String currentInterestChangesetFile;
+	private boolean createChangeFiles;
+	private String formatedFilePath;
+
+
+	public static final String EXTENSION_ADDED_NT =  ".added.nt";
+	public static final String EXTENSION_REMOVED_NT =  ".removed.nt";
+
+
+	public InterestEvaluator(Subscriber subscriber, Changeset changeset, String formatedFilePath) {
 		this.subscriber = subscriber;
 		this.changeset = changeset;
+		this.formatedFilePath = formatedFilePath;
 	}
-	
+
 	/**
 	 * evaluate each interests of a subscriber sequentially
 	 */
-	public void start(){
+	public void start(String foldername, boolean createChangeFiles){
+		this.foldername = foldername;
+		this.createChangeFiles = createChangeFiles;
 		List<Interest> interests = subscriber.getInterestExpressions();
 		for (Interest i : interests) {
 			evaluate(i);
 		}
 	}
-	
+
 	/**
 	 * evaluate an interest over a changeset in two steps:
 	 * <ol>
 	 * <li>evaluate interest on removed triples</li>
 	 * <li>evaluate interest on added triples</li>
 	 * <ol>
-	 *  
+	 *
 	 * @param interest
 	 *            the interest expression by a subscriber
 	 */
 	private void evaluate(final Interest interest) {
-	
-		logger.info("Evaluating removed triples ...");
+		String folder = foldername+"/"+interest.getId() + "/" + formatedFilePath.substring(0, formatedFilePath.lastIndexOf("/"));
+		logger.info(folder);
+		File f = new File(folder);
+		if(!f.exists()){
+			f.mkdirs();
+		}
+		currentInterestChangesetFile = foldername+"/"+interest.getId() + "/" + formatedFilePath;
+		logger.info(currentInterestChangesetFile);
+		//logger.info("Evaluating removed triples ... path:" +currentInterestChangesetFile);
 		//evaluate deletion on target dataset
 		evaluateRemoved(interest);
 		logger.info("Evaluating added triples ...");
 		//evaluate addition
 		evaluateAdded(interest);
 	}
-	
+
 	/**
-	 *  Interest evaluation over removed triples 
-	 *  
+	 *  Interest evaluation over removed triples
+	 *
 	 * @param interest
 	 * @return
 	 */
@@ -78,14 +102,14 @@ public class InterestEvaluator {
 		//make a copy of removed triples from changeset
 		Model removed = ModelFactory.createDefaultModel().add(changeset.getRemovedTriples());
 		logger.info("Removing triples from potentially interesting dataset:"  + subscriber.getPiStoreBaseURI());
-		//first evaluate the removed triples on Potentially interesting triples of an interest	
+		//first evaluate the removed triples on Potentially interesting triples of an interest
 		if(!PIManager.removeFromPI(removed, subscriber, interest)) {
 			logger.info("Cannot remove triples from potentially interesting dataset: " + subscriber.getPiStoreBaseURI());
 		}
-		
-		// Evaluate interest expression directly on target endpoint of a subscriber process 
+
+		// Evaluate interest expression directly on target endpoint of a subscriber process
 		EvaluationResultModel  removeResult = processRemove(interest);
-		
+
 		logger.info("Inserting triples to potentially interesting dataset:"  + subscriber.getPiStoreBaseURI());
 		//store triples from target that become potentially interesting
 		if(!removeResult.getPotentiallyInterestingTriples().isEmpty()){
@@ -101,45 +125,55 @@ public class InterestEvaluator {
 				logger.info("Cannot remove triples from target: " + subscriber.getTargetUpdateURI());
 			}
 		}
+		if(createChangeFiles){
+			try{
+				String outUri = currentInterestChangesetFile+ EXTENSION_REMOVED_NT ;
+				PrintWriter out = new PrintWriter(new FileOutputStream(new File(outUri), true));
+				removeResult.getInterestingTriples().write(out, "N-TRIPLE");
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
 		logger.info(changeset.getSequenceNum()+ ":" + "-----------------END of EVALUATION ON REMOVED TRIPLES -------------");
 	}
-	
+
+
 	/**
-	 * 
+	 *
 	 * @param interest
-	 * @return 
+	 * @return
 	 */
 	private EvaluationResultModel processRemove(final Interest interest){
-		
+
 		Model removed = ModelFactory.createDefaultModel().add(changeset.getRemovedTriples());
-				
+
 		//TODO: include filters with BGP
-		
+
 		//Interesting removed triples
 		Model bgpMatching = getMatching(interest.getBgp(), removed);
 		removed.remove(bgpMatching);
-		
+
 		//Interesting optional removed triples
 		Model ogpMatching = getMatching(interest.getOgp(), removed);
 		removed.remove(ogpMatching);
-		
+
 		//Interesting removed triples and potentially interesting triples (because of partially removed pattern)
 		EvaluationResultModel result = getBGPCombinationsForRemove(interest, removed);
-		
-		
+
+
 		//add bgp and ogp matchings to interesting removed triples
 		result.addInterestingTriples(bgpMatching);
 		result.addPotentiallyInterestingTriples(ogpMatching);
 		return result;
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param paths
 	 * @param model
 	 * @return
 	 */
-	private Model getMatching(List<TriplePath> paths, Model model){		
+	private Model getMatching(List<TriplePath> paths, Model model){
 		Query query = QueryDecomposer.toConstructQuery(paths);
 		return SPARQLExecutor.executeConstruct(model, query);
 	}
@@ -156,9 +190,9 @@ public class InterestEvaluator {
 			//2^b ask queries
 			List<Query> askQueries = QueryDecomposer.composeAskQueries(paths, i);
 			InterestExprGraph g = new InterestExprGraph();
-			for (Query q : askQueries) {	
+			for (Query q : askQueries) {
 				List<TriplePath> askPaths = QueryPatternExtractor.getBGPTriplePaths(q);
-				//if q contains disjoint pattern				
+				//if q contains disjoint pattern
 				if(askPaths.size() > 1 && !g.isNonDisjoint(q)){
 					logger.info("SKIPPING: Disjoint Query: \n" + q);
 					continue;
@@ -173,14 +207,14 @@ public class InterestEvaluator {
 						result.addPotentiallyInterestingTriples(partials.getPotentiallyInterestingTriples());
 						removed.remove(r);
 					}
-					
+
 				}
 			}
 		}
-		
+
 		/*List<TriplePath> ogps = interest.getOgp();
 		for(int i= ogps.size()-1; i>0; i++){
-			
+
 		}*/
 		return result;
 	}
@@ -198,9 +232,9 @@ public class InterestEvaluator {
 					//2^b ask queries
 					List<Query> askQueries = QueryDecomposer.composeAskQueries(ogp, i);
 					InterestExprGraph g = new InterestExprGraph();
-					for (Query q : askQueries) {	
+					for (Query q : askQueries) {
 						List<TriplePath> askPaths = QueryPatternExtractor.getBGPTriplePaths(q);
-						//if q contains disjoint pattern				
+						//if q contains disjoint pattern
 						if(askPaths.size() > 1 && !g.isNonDisjoint(q)){
 							logger.info("SKIPPING: Disjoint OGP Query: \n" + q);
 							continue;
@@ -215,14 +249,14 @@ public class InterestEvaluator {
 								result.addPotentiallyInterestingTriples(partials.getPotentiallyInterestingTriples());
 								model.remove(r);
 							}
-							
+
 						}
 					}
 				}
 		return result;
 	}
 	/**
-	 * 
+	 *
 	 * @param interest
 	 * @param candidatePaths
 	 * @param candidateModel
@@ -232,18 +266,18 @@ public class InterestEvaluator {
 		List<TriplePath> paths = interest.getBgp();
 		Model interestingTriples = ModelFactory.createDefaultModel();
 		Model potentiallyInterestingTriples = ModelFactory.createDefaultModel();
-		
+
 		//InterestExprGraph g = new InterestExprGraph();
-		
+
 		Model missing= TargetManager.getMissingFromTarget(subscriber, paths, new ArrayList<TriplePath>(), candidatePaths, candidateModel);
 		if(!missing.isEmpty()){
-			// TODO: check if the prime is related to candidateModel only. 			
-		   // If there are other triples connected a triple in prime from target, then leave this triple (remove from missing)			
+			// TODO: check if the prime is related to candidateModel only.
+		   // If there are other triples connected a triple in prime from target, then leave this triple (remove from missing)
 			interestingTriples.add(missing);
 			Model prime = missing.remove(candidateModel);
 			potentiallyInterestingTriples.add(prime);
 		}
-		
+
 		EvaluationResultModel result = new EvaluationResultModel();
 		result.getInterestingTriples().add(interestingTriples);
 		result.getPotentiallyInterestingTriples().add(potentiallyInterestingTriples);
@@ -252,15 +286,15 @@ public class InterestEvaluator {
 
 	/**
 	 * Interest evaluation over Added triples of a changeset,
-	 * 
+	 *
 	 * @param interest
 	 * @param changeset
 	 * @return
 	 */
 	private void evaluateAdded(final Interest interest) {
-		
+
 		EvaluationResultModel evaluationResult = processAdditions(interest);
-		
+
 		if(!evaluationResult.getPotentiallyInterestingTriples().isEmpty()){
 			logger.info("Inserting triples to potentially interesting dataset:"  + subscriber.getPiStoreBaseURI());
 			// Insert potentially interesting triples to local triple store
@@ -270,7 +304,7 @@ public class InterestEvaluator {
 		}else{
 			logger.info("NO potentially intersting added triples found");
 		}
-		if(!evaluationResult.getInterestingTriples().isEmpty()){		
+		if(!evaluationResult.getInterestingTriples().isEmpty()){
 			logger.info("Inserting interesting added triples to target dataset:"  + subscriber.getTargetUpdateURI());
 			evaluationResult.getInterestingTriples().write(System.out, "N-TRIPLE");
 			if(!TargetManager.insertToTarget(evaluationResult.getInterestingTriples(), subscriber)){
@@ -279,24 +313,33 @@ public class InterestEvaluator {
 		}else{
 			logger.info(" NO Interesting added triples Found!");
 		}
+		if(createChangeFiles){
+			try{
+				String outUri = currentInterestChangesetFile+ EXTENSION_ADDED_NT ;
+				PrintWriter out = new PrintWriter(new FileOutputStream(new File(outUri), true));
+				evaluationResult.getInterestingTriples().write(out, "N-TRIPLE");
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
 		logger.info(changeset.getSequenceNum()+ ":" + "~~~~~~~~~~~~~~~~END of EVALUATING ADDED TRIPLES ~~~~~~~~~~~~~~~~~~");
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param interest
 	 * @return
 	 */
 	private EvaluationResultModel processAdditions(final Interest interest){
 		Model added = ModelFactory.createDefaultModel().add(changeset.getAddedTriples());
 		EvaluationResultModel result = new EvaluationResultModel();
-		
+
 		// Interesting added triples
 		Model bgpMatching = getMatching(interest.getBgp(), added);
 		if(!bgpMatching.isEmpty()){
 			Model matching = PIManager.getMissingFromPI(subscriber,	interest.getSourceEndpoint(), interest.getBgp(), interest.getOgp(), interest.getBgp(), bgpMatching);
 			bgpMatching.add(matching);
-		
+
 			// remove matchings found from PI
 			Model cleaning = matching.remove(bgpMatching);
 			if(!cleaning.isEmpty())
@@ -306,8 +349,8 @@ public class InterestEvaluator {
 			added.remove(bgpMatching);
 			result = getBGPCombinationsForAdded(interest, added);
 			result.addInterestingTriples(bgpMatching);
-		}				
-		
+		}
+
 		// Interesting optional removed triples
 		Model ogpMatching = getMatching(interest.getOgp(), added);
 		if(!ogpMatching.isEmpty()){
@@ -321,7 +364,7 @@ public class InterestEvaluator {
 		return result;
 	}
 	/**
-	 * 
+	 *
 	 * @param interest
 	 * @param added
 	 * @return
@@ -329,7 +372,7 @@ public class InterestEvaluator {
 	private EvaluationResultModel getBGPCombinationsForAdded(final Interest interest, Model added){
 		EvaluationResultModel result = new EvaluationResultModel();
 		List<TriplePath> paths = interest.getBgp();
-		
+
 		//Combinations - BGP
 		for (int i = paths.size() - 1; i > 0; i--) {
 			// 2^b ask queries
@@ -361,9 +404,9 @@ public class InterestEvaluator {
 							continue;
 						}
 					}
-					
+
 					Model partials = assertAdded(interest, askPaths, r);
-					
+
 					if(partials.isEmpty()){
 						result.addPotentiallyInterestingTriples(r);
 					}
@@ -375,11 +418,11 @@ public class InterestEvaluator {
 				}
 			}
 		}
-		
+
 		return result;
 	}
 	/**
-	 * 
+	 *
 	 * @param interest
 	 * @param askPaths
 	 * @param res
@@ -389,13 +432,13 @@ public class InterestEvaluator {
 		InterestExprGraph g = new InterestExprGraph();
 		Model interestingTriples = ModelFactory.createDefaultModel();
 		Model potentiallyInterestingTriples = ModelFactory.createDefaultModel();
-		
+
 		Model partial = ModelFactory.createDefaultModel().add(res);
 		// find partially matching from PI and check the rest from target
 		List<TriplePath> askDiff = new ArrayList<TriplePath>();
 		askDiff.addAll(interest.getBgp());
 		askDiff.removeAll(askPaths);
-		
+
 		for (int j = askDiff.size()-1 ; j > 0; j--) {
 			List<Query> consQueries = QueryDecomposer.composeConstructQueries(askDiff, j);
 
@@ -403,9 +446,9 @@ public class InterestEvaluator {
 				List<TriplePath> diffAndAsk = new ArrayList<TriplePath>();
 				diffAndAsk.addAll(askPaths);
 				diffAndAsk.addAll(QueryPatternExtractor.getBGPTriplePaths(qc));
-				
+
 				if(!g.isNonDisjoint(QueryDecomposer.toAskQuery(diffAndAsk))){
-					//logger.info("DISJOINT delta: \n" + QueryDecomposer.toAskQuery(diffAndAsk));					
+					//logger.info("DISJOINT delta: \n" + QueryDecomposer.toAskQuery(diffAndAsk));
 					continue;
 				}
 				//candidate C_i from Delta = A and pi
@@ -429,18 +472,18 @@ public class InterestEvaluator {
 				logger.info("Cannot remove triples from PIs that becomes interesting!");
 			}
 		}
-		
+
 		return interestingTriples;
 	}
 	/**
-	 * 
+	 *
 	 * @param interest
 	 * @param askPaths
 	 * @param candidateModel
 	 * @return
 	 */
 	private Model getPartialsFromTarget(final Interest interest, List<TriplePath> askPaths, Model candidateModel){
-		
+
 		Model result = ModelFactory.createDefaultModel();
 		Model missing= TargetManager.getMissingFromTarget(subscriber, interest.getBgp(), interest.getOgp(), askPaths, candidateModel);
 		if(!missing.isEmpty()){
@@ -448,7 +491,7 @@ public class InterestEvaluator {
 			Model prime = missing.remove(candidateModel);
 			return result.remove(prime);
 		}
-		
+
 		return result;
 	}
 }

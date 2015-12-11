@@ -36,7 +36,7 @@ public class RemoteChangesetManager implements ChangesetManager {
     /**
      * folder to save the extracted changeset files
      */
-    private String changesetDownloadFolder = "./changesets/";
+    private String changesetDownloadFolder = "../../changesets/";
     
     private InterestManager interestManager;
     
@@ -126,6 +126,7 @@ public class RemoteChangesetManager implements ChangesetManager {
                 logger.info(" Reading triples from downloaded files");
                 if (deletedCompressedDownloadedFile != null) {
                     String file = Utilities.decompressGZipFile(deletedCompressedDownloadedFile);
+                    Utilities.deleteFile(deletedCompressedDownloadedFile);
                     removedTriples = RDFDataMgr.loadModel(file);
                     logger.info(" Deleting downloaded file: "+ file);
                     Utilities.deleteFile(file);
@@ -133,12 +134,13 @@ public class RemoteChangesetManager implements ChangesetManager {
 
                 if (addedCompressedDownloadedFile != null) {
                     String file = Utilities.decompressGZipFile(addedCompressedDownloadedFile);
+                    Utilities.deleteFile(addedCompressedDownloadedFile);
                     addedTriples = RDFDataMgr.loadModel(file);
                     logger.info(" Deleting downloaded file: "+ file);
                     Utilities.deleteFile(file);
                 }
                 
-                Changeset changeset = new Changeset(changesetAddress, removedTriples, addedTriples, currentCounter.getSequenceNumber());	        
+                Changeset changeset = new Changeset(changesetAddress, removedTriples, addedTriples, currentCounter.getFormattedFilePath() );	        //currentCounter.getSequenceNumber()
                 //Notify evaluator
                 logger.info("Notifying interest evaluation manager by sending changeset triples .....");
                 InterestEvaluationManager eval= new InterestEvaluationManager(interestManager, changeset);

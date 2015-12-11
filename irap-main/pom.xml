@@ -6,7 +6,7 @@
     <version>0.2.1</version>
   </parent>
   <artifactId>irap-main</artifactId>
-  
+
    <dependencies>
 		<dependency>
 			<groupId>de.unibonn.iai.eis</groupId>
@@ -27,6 +27,7 @@
 			<groupId>de.unibonn.iai.eis</groupId>
 			<artifactId>irap-change-management</artifactId>
 			<version>${irap.version}</version>
-		</dependency>
+		</dependency>	
 	 </dependencies>
+
 </project>

@@ -101,7 +101,7 @@ public class LocalChangesetManager implements ChangesetManager {
 	                	 processedFiles++;
 	                	 Utilities.deleteFile(addedTriplesURL);
 	                 }
-	                 Changeset changeset = new Changeset(folder, removedTriples, addedTriples, currentCounter.getSequenceNumber());	        
+	                 Changeset changeset = new Changeset(folder, removedTriples, addedTriples, currentCounter.getFormattedFilePath());	        
 	                 //Notify evaluator
 	                 logger.info("Notifying interest evaluation manager by sending changeset triples .....");
 	                 InterestEvaluationManager eval= new InterestEvaluationManager(interestManager, changeset);

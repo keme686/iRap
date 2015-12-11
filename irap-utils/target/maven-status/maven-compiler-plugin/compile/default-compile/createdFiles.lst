@@ -1,0 +1,17 @@
+de\unibonn\iai\eis\irap\sparql\QueryDecomposer.class
+de\unibonn\iai\eis\irap\helper\SLList.class
+de\unibonn\iai\eis\irap\helper\Utilities.class
+de\unibonn\iai\eis\irap\sparql\QueryPatternExtractor$1$1.class
+de\unibonn\iai\eis\irap\sparql\QueryPatternExtractor.class
+de\unibonn\iai\eis\irap\sparql\QueryPatternExtractor$4$1.class
+de\unibonn\iai\eis\irap\sparql\QueryPatternExtractor$1.class
+de\unibonn\iai\eis\irap\sparql\QueryPatternExtractor$2.class
+de\unibonn\iai\eis\irap\sparql\QueryValidator.class
+de\unibonn\iai\eis\irap\helper\InterestExprNode$InterestExprNodeType.class
+de\unibonn\iai\eis\irap\helper\SLList$1SLIterator.class
+de\unibonn\iai\eis\irap\helper\InterestExprGraph.class
+de\unibonn\iai\eis\irap\helper\SLList$Node.class
+de\unibonn\iai\eis\irap\sparql\QueryPatternExtractor$3.class
+de\unibonn\iai\eis\irap\sparql\SPARQLExecutor.class
+de\unibonn\iai\eis\irap\sparql\QueryPatternExtractor$4.class
+de\unibonn\iai\eis\irap\helper\InterestExprNode.class

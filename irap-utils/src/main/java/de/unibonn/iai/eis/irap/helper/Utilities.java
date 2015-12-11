@@ -58,13 +58,14 @@ public class Utilities {
         //The output filename is the same as input filename without last .gz
         int lastDotPosition = filename.lastIndexOf('.');
         outFilename = filename.substring(0, lastDotPosition);
-
-        try (
+        InputStreamReader isr=null;
+        OutputStreamWriter out=null;
+        try {
                 FileInputStream fis = new FileInputStream(filename);
                 GZIPInputStream gis = new GZIPInputStream(fis);
-                InputStreamReader isr = new InputStreamReader(gis, "UTF8");
-                OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(outFilename), "UTF8")
-        ) {
+                 isr = new InputStreamReader(gis, "UTF8");
+                 out = new OutputStreamWriter(new FileOutputStream(outFilename), "UTF8");
+    
             int character;
             while ((character = isr.read()) != -1) {
                 out.write(character);
@@ -80,6 +81,14 @@ public class Utilities {
             outFilename = "";
         } finally {
         	Utilities.deleteFile(filename);
+        	try{
+        	if(isr != null)
+        		isr.close();
+        	if(out != null)
+        		out.close();
+        	}catch(Exception e){
+        		
+        	}
         }
         return outFilename;
     }
@@ -115,11 +124,9 @@ public class Utilities {
             return null;
         }
 
-        try (
-                ReadableByteChannel rbc = Channels.newChannel(url.openStream());
-                FileOutputStream fos = new FileOutputStream(file);
-        ) {
-
+        try {
+        	 ReadableByteChannel rbc = Channels.newChannel(url.openStream());
+             FileOutputStream fos = new FileOutputStream(file);
             fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
         } catch (FileNotFoundException e) {
             return null;
@@ -136,8 +143,9 @@ public class Utilities {
     
     public static String getFileAsString(String filename) {
         StringBuilder str = new StringBuilder();
-
-        try (InputStreamReader in = new InputStreamReader(new FileInputStream(filename), "UTF-8")) {
+        InputStreamReader in=null;
+        try  {
+        	in = new InputStreamReader(new FileInputStream(filename), "UTF-8");
             int ch;
             while ((ch = in.read()) != -1) {
                 str.append((char) ch);
@@ -149,7 +157,14 @@ public class Utilities {
         } catch (IOException e) {
             throw new IllegalArgumentException("IOException in file " + filename, e);
         }
-
+        finally{
+        	try{
+        		if(in != null)
+        			in.close();
+        	}catch(Exception e){
+        		
+        	}
+        }
         return str.toString();
     }
 }

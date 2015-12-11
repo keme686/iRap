@@ -3,6 +3,7 @@
  */
 package de.unibonn.iai.eis.irap.evaluation;
 
+import java.io.File;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -22,10 +23,11 @@ public class InterestEvaluationManager {
 	
 	InterestManager interestManager;
 	Changeset changeset;
-	
+	String formatedFilePath;
 	 public InterestEvaluationManager(InterestManager interestManager, Changeset changeset) {
 		this.interestManager = interestManager;
 		this.changeset = changeset;
+		this.formatedFilePath = changeset.getSequenceNum();
 	}
 	 
 	/**
@@ -37,8 +39,13 @@ public class InterestEvaluationManager {
 		List<Subscriber> subscribers = interestManager.getSubscribers(changeset.getChangesetUri());
 		for(Subscriber s: subscribers){
 			logger.info("Stating evalaution for Subscriber: " + s.getId());
-			InterestEvaluator eval = new InterestEvaluator(s, changeset);
-			eval.start();
+			InterestEvaluator eval = new InterestEvaluator(s, changeset, formatedFilePath);
+			String folderName = s.getTargetEndpoint() + "_changesets";
+			File folder = new File(folderName);
+			logger.info(folderName);
+			if(!folder.exists())
+				folder.mkdir();
+			eval.start(folderName, true);
 		}
 	}
 }

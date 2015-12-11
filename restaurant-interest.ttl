@@ -1,0 +1,41 @@
+@prefix : <http://eis.iai.uni-bonn.de/irap/ontology/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@base <http://eis.iai.uni-bonn.de/irap/ontology/> .
+
+###  http://eis.iai.uni-bonn.de/irap/resource/Restaurant
+
+<http://eis.iai.uni-bonn.de/irap/resource/Restaurant> rdf:type :Interest ;
+                                                  :sourceEndpoint "http://live.dbpedia.org/sparql" ;
+
+                                                  :lastPublishedFilename "lastPublishedFile.txt" ;
+
+                                                  :bgp "?a  a <http://dbpedia.org/ontology/Restaurant> .  ?a <http://dbpedia.org/property/name>  ?name . ?a  <http://www.georss.org/georss/point> ?point. ?a <http://dbpedia.org/property/rating> ?rating. " ;
+
+                                                  :ogp "?a <http://xmlns.com/foaf/0.1/homepage>  ?page ." ;
+
+                                                  :changesetBaseURI "http://live.dbpedia.org/changesets/" ;
+
+                                                  :changesetPublicationType "REMOTE" ;
+
+                                                  :subscriber <http://eis.iai.uni-bonn.de/irap/resource/restaurants.org> .
+
+
+###  http://eis.iai.uni-bonn.de/irap/resource/restaurants.org
+
+<http://eis.iai.uni-bonn.de/irap/resource/restaurants.org> rdf:type :Subscriber;
+
+                                                     :piStoreBaseURI "restaurants-pi-tdb" ;
+
+                                                     :piStorageType "TDB" ;
+
+                                                     :targetType "TDB" ;
+
+                                                     :targetEndpoint "restaurants-tdb" ;
+
+                                                     :piTrackingMethod "LOCAL" ;
+
+                                                     :targetUpdateURI "restaurants-tdb" .

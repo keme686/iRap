@@ -25,7 +25,7 @@ public class Main
 	
     public static void main( String[] args )
     {    	
-    	String filename = "../interest.ttl";
+    	String filename = "../restaurant-interest.ttl";
     	int mode = 0;
     	if(args == null || args.length < 2){
     		logger.info("Usage: \n$mvn exec:java -Dexec.args=\"<interest>, <run-mode>\"\n Where:\n\t <interest> is interest expression RDF file (ttl, nt. rdf) and \n\t <run-mode> is an interer value 0 - for one time and -1 for endless run mode");
